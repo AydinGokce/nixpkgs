@@ -5,6 +5,11 @@ with lib;
 let
   cfg = config.services.create_ap;
   configFile = pkgs.writeText "create_ap.conf" (generators.toKeyValue { } cfg.settings);
+  clearState = pkgs.writeShellScript "clear-ap-state" ''
+    rm -rf /tmp/create_ap.*.lock
+    rm -rf /tmp/create_ap.wlp1s0.conf.*
+    rm -rf /tmp/create_ap.common.conf/ifaces/*
+'';
 in {
   options = {
     services.create_ap = {
@@ -34,6 +39,7 @@ in {
         wantedBy = [ "multi-user.target" ];
         description = "Create AP Service";
         after = [ "network.target" ];
+        preStart = lib.concatStringsSep "\n" [ clearState ];
         restartTriggers = [ configFile ];
         serviceConfig = {
           ExecStart = "${pkgs.linux-wifi-hotspot}/bin/create_ap --config ${configFile}";
